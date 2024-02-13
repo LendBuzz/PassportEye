@@ -1,0 +1,56 @@
+# This workflow was edited for uploading to Lendbuzz Codeartifact
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Upload Python Package
+
+on:
+  release:
+    types: [published]
+
+env:
+  CODE_ARTIFACT_AWS_REGION: us-east-1
+  CODE_ARTIFACT_AWS_ACCOUNT: 634813175631
+  CODE_ARTIFACT_REPOSITORY_NAME: python_packages
+  CODE_ARTIFACT_ROLE_NAME: GithubActionsArtifactCreatorAccess
+  RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Configure Aws Credentials for CodeArtifact (OIDC)
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+       role-to-assume: arn:aws:iam::${{env.CODE_ARTIFACT_AWS_ACCOUNT}}:role/${{env.CODE_ARTIFACT_ROLE_NAME}}
+       aws-region: ${{env.CODE_ARTIFACT_AWS_REGION}}
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.8'
+
+    - name: Installing wheel and twine
+      run: |
+        python -m pip install --upgrade pip
+        pip install wheel twine
+    - name: Connect twine to AWS CodeArtifact
+      run: aws codeartifact login --tool twine --region ${{env.CODE_ARTIFACT_AWS_REGION}} --domain lendbuzz --repository ${{env.CODE_ARTIFACT_REPOSITORY_NAME}} --domain-owner ${{env.CODE_ARTIFACT_AWS_ACCOUNT}}
+
+    - name: Building package
+      run: python setup.py sdist bdist_wheel
+
+    - name: Publishing package to Codeartifact
+      run: twine upload --repository codeartifact dist/*
