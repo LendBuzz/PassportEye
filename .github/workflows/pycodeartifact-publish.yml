@@ -53,4 +53,4 @@ jobs:
       run: python setup.py sdist bdist_wheel
 
     - name: Publishing package to Codeartifact
-      run: twine upload --repository codeartifact dist/*
+      run: twine upload --repository codeartifact dist/* --verbose
